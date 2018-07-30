@@ -182,6 +182,12 @@ type Cmdable interface {
 	XRead(streams ...string) *XStreamSliceCmd
 	XReadN(count int64, streams ...string) *XStreamSliceCmd
 	XReadExt(opt *XReadExt) *XStreamSliceCmd
+	
+	XGroupCreate(key string, group, start string) *StatusCmd
+	XReadGroupN(group_name, consumer string, count int64, keys ...string) *XStreamSliceMapCmd
+	XAck(key, group_name string, stream_ids ...string) *IntCmd
+	
+	
 	ZAdd(key string, members ...Z) *IntCmd
 	ZAddNX(key string, members ...Z) *IntCmd
 	ZAddXX(key string, members ...Z) *IntCmd
@@ -1420,6 +1426,38 @@ func (c *cmdable) XReadBlock(block time.Duration, streams ...string) *XStreamSli
 		Block:   block,
 	})
 }
+
+
+func(c * cmdable) XGroupCreate(key, group, start string) * StatusCmd {
+	
+	args := [] interface{} {"xgroup", "create", key,  group, start}
+	cmd := NewStatusCmd(args...)
+	c.process(cmd)
+	return cmd
+}
+
+
+
+func (c * cmdable ) XReadGroupN(group, consumer string, count int64, keys ...string) *XStreamSliceMapCmd {
+	args := [] interface{} {"xreadergroup", "group", group, consumer, "count", count, "streams"}
+	for _, v := range keys {
+		args = append(args, v)
+	}
+	cmd := NewXStreamSliceMapCmd(args...)
+	c.process(cmd)
+	return cmd
+}
+
+func (c * cmdable) XAck(key, group string, streams ...string) *IntCmd {
+	args := [] interface{} {"xack", key,  group}
+	for _, v := range streams {
+		args = append(args, v)
+	}
+	cmd := NewIntCmd(args...)
+	c.process(cmd)
+	return cmd
+}
+
 
 //------------------------------------------------------------------------------
 

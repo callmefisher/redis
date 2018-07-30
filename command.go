@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-redis/redis/internal"
+		"github.com/go-redis/redis/internal"
 	"github.com/go-redis/redis/internal/pool"
 	"github.com/go-redis/redis/internal/proto"
 	"github.com/go-redis/redis/internal/util"
@@ -761,6 +761,72 @@ func (cmd *XStreamSliceCmd) readReply(cn *pool.Conn) error {
 	cmd.val = v.([]*XStream)
 	return nil
 }
+
+
+type XStreamSliceMapCmd struct {
+	baseCmd
+	val map[string]*XStreamSliceCmd
+}
+
+var _ Cmder = (*XStreamSliceMapCmd)(nil)
+
+func NewXStreamSliceMapCmd(args ...interface{}) *XStreamSliceMapCmd {
+	return &XStreamSliceMapCmd{
+		baseCmd: baseCmd{_args: args},
+	}
+}
+
+func (cmd* XStreamSliceMapCmd) Val() map[string] *XStreamSliceCmd {
+	return cmd.val
+}
+
+func (cmd* XStreamSliceMapCmd) Result() (map[string]*XStreamSliceCmd, error) {
+return cmd.val, cmd.err
+}
+
+func (cmd* XStreamSliceMapCmd) String() string {
+	return cmdString(cmd, cmd.val)
+}
+
+func (cmd* XStreamSliceMapCmd) readReply(cn * pool.Conn) error {
+	var v interface{}
+	v, cmd.err = cn.Rd.ReadArrayReply(nil)
+	if cmd.err != nil {
+		return cmd.err
+	}
+	cmd.val = v.(map[string]* XStreamSliceCmd)
+	return nil
+}
+
+
+func xStreamSliceMapParse(rd* proto.Reader, n int64) (interface{}, error) {
+	ret := map[string][]*XStreamSliceCmd{}
+	for i:= int64(0); i < n; i++ {
+		val, err := rd.ReadArrayReply(nil)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range val.(map[string][]*XStreamSliceCmd)  {
+			ret[k] = v
+		}
+	}
+	return ret, nil
+}
+
+func xStreamSliceWithKeyParser(rd* proto.Reader, n int64) (interface{}, error){
+	var key string
+	key, err := rd.ReadStringReply()
+	if err != nil {
+		return nil, err
+	}
+	v, err := rd.ReadArrayReply(xStreamSliceParser)
+	if err != nil {
+		return nil, err
+	}
+	return map[string][]*XStreamSliceCmd{key:v.([]*XStreamSliceCmd)}, nil
+}
+
+
 
 // Implements proto.MultiBulkParse
 func xStreamSliceParser(rd *proto.Reader, n int64) (interface{}, error) {
