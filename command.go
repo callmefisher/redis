@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-		"github.com/go-redis/redis/internal"
+	"github.com/go-redis/redis/internal"
 	"github.com/go-redis/redis/internal/pool"
 	"github.com/go-redis/redis/internal/proto"
 	"github.com/go-redis/redis/internal/util"
@@ -762,7 +762,6 @@ func (cmd *XStreamSliceCmd) readReply(cn *pool.Conn) error {
 	return nil
 }
 
-
 type XStreamSliceMapCmd struct {
 	baseCmd
 	val map[string]*XStreamSliceCmd
@@ -776,44 +775,43 @@ func NewXStreamSliceMapCmd(args ...interface{}) *XStreamSliceMapCmd {
 	}
 }
 
-func (cmd* XStreamSliceMapCmd) Val() map[string] *XStreamSliceCmd {
+func (cmd *XStreamSliceMapCmd) Val() map[string]*XStreamSliceCmd {
 	return cmd.val
 }
 
-func (cmd* XStreamSliceMapCmd) Result() (map[string]*XStreamSliceCmd, error) {
-return cmd.val, cmd.err
+func (cmd *XStreamSliceMapCmd) Result() (map[string]*XStreamSliceCmd, error) {
+	return cmd.val, cmd.err
 }
 
-func (cmd* XStreamSliceMapCmd) String() string {
+func (cmd *XStreamSliceMapCmd) String() string {
 	return cmdString(cmd, cmd.val)
 }
 
-func (cmd* XStreamSliceMapCmd) readReply(cn * pool.Conn) error {
+func (cmd *XStreamSliceMapCmd) readReply(cn *pool.Conn) error {
 	var v interface{}
 	v, cmd.err = cn.Rd.ReadArrayReply(xStreamSliceMapParse)
 	if cmd.err != nil {
 		return cmd.err
 	}
-	cmd.val = v.(map[string]* XStreamSliceCmd)
+	cmd.val = v.(map[string]*XStreamSliceCmd)
 	return nil
 }
 
-
-func xStreamSliceMapParse(rd* proto.Reader, n int64) (interface{}, error) {
+func xStreamSliceMapParse(rd *proto.Reader, n int64) (interface{}, error) {
 	ret := map[string][]*XStreamSliceCmd{}
-	for i:= int64(0); i < n; i++ {
+	for i := int64(0); i < n; i++ {
 		val, err := rd.ReadArrayReply(xStreamSliceWithKeyParser)
 		if err != nil {
 			return nil, err
 		}
-		for k, v := range val.(map[string][]*XStreamSliceCmd)  {
+		for k, v := range val.(map[string][]*XStreamSliceCmd) {
 			ret[k] = v
 		}
 	}
 	return ret, nil
 }
 
-func xStreamSliceWithKeyParser(rd* proto.Reader, n int64) (interface{}, error){
+func xStreamSliceWithKeyParser(rd *proto.Reader, n int64) (interface{}, error) {
 	var key string
 	key, err := rd.ReadStringReply()
 	if err != nil {
@@ -823,10 +821,8 @@ func xStreamSliceWithKeyParser(rd* proto.Reader, n int64) (interface{}, error){
 	if err != nil {
 		return nil, err
 	}
-	return map[string][]*XStreamSliceCmd{key:v.([]*XStreamSliceCmd)}, nil
+	return map[string][]*XStreamSliceCmd{key: v.([]*XStreamSliceCmd)}, nil
 }
-
-
 
 // Implements proto.MultiBulkParse
 func xStreamSliceParser(rd *proto.Reader, n int64) (interface{}, error) {
