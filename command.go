@@ -790,7 +790,7 @@ func (cmd* XStreamSliceMapCmd) String() string {
 
 func (cmd* XStreamSliceMapCmd) readReply(cn * pool.Conn) error {
 	var v interface{}
-	v, cmd.err = cn.Rd.ReadArrayReply(nil)
+	v, cmd.err = cn.Rd.ReadArrayReply(xStreamSliceMapParse)
 	if cmd.err != nil {
 		return cmd.err
 	}
@@ -802,7 +802,7 @@ func (cmd* XStreamSliceMapCmd) readReply(cn * pool.Conn) error {
 func xStreamSliceMapParse(rd* proto.Reader, n int64) (interface{}, error) {
 	ret := map[string][]*XStreamSliceCmd{}
 	for i:= int64(0); i < n; i++ {
-		val, err := rd.ReadArrayReply(nil)
+		val, err := rd.ReadArrayReply(xStreamSliceWithKeyParser)
 		if err != nil {
 			return nil, err
 		}

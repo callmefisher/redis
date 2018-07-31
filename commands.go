@@ -1439,7 +1439,7 @@ func(c * cmdable) XGroupCreate(key, group, start string) * StatusCmd {
 
 
 func (c * cmdable ) XReadGroupN(group, consumer string, count int64, keys ...string) *XStreamSliceMapCmd {
-	args := [] interface{} {"xreadergroup", "group", group, consumer, "count", count, "streams"}
+	args := [] interface{} {"xreadgroup", "group", group, consumer, "count", count, "streams"}
 	for _, v := range keys {
 		args = append(args, v)
 	}
