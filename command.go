@@ -11,6 +11,7 @@ import (
 	"github.com/go-redis/redis/internal/pool"
 	"github.com/go-redis/redis/internal/proto"
 	"github.com/go-redis/redis/internal/util"
+	"github.com/qiniu/log"
 )
 
 type Cmder interface {
@@ -764,7 +765,7 @@ func (cmd *XStreamSliceCmd) readReply(cn *pool.Conn) error {
 
 type XStreamSliceMapCmd struct {
 	baseCmd
-	val map[string]*XStreamSliceCmd
+	val map[string][]*XStream
 }
 
 var _ Cmder = (*XStreamSliceMapCmd)(nil)
@@ -775,11 +776,11 @@ func NewXStreamSliceMapCmd(args ...interface{}) *XStreamSliceMapCmd {
 	}
 }
 
-func (cmd *XStreamSliceMapCmd) Val() map[string]*XStreamSliceCmd {
+func (cmd *XStreamSliceMapCmd) Val() map[string][]*XStream {
 	return cmd.val
 }
 
-func (cmd *XStreamSliceMapCmd) Result() (map[string]*XStreamSliceCmd, error) {
+func (cmd *XStreamSliceMapCmd) Result() (map[string][]*XStream, error) {
 	return cmd.val, cmd.err
 }
 
@@ -787,44 +788,241 @@ func (cmd *XStreamSliceMapCmd) String() string {
 	return cmdString(cmd, cmd.val)
 }
 
+//   "*1\r\n
+//    *2\r\n
+//    $7\r\n
+//    stream1\r\n   --->  1
+//    *1\r\n        -----> 2
+//    *2\r\n
+//    +1532923998460-0\r\n
+//    *2\r\n
+//    $3\r\n
+//    foo\r\n
+//    $2\r\n
+//    10\r\n
+
 func (cmd *XStreamSliceMapCmd) readReply(cn *pool.Conn) error {
 	var v interface{}
-	v, cmd.err = cn.Rd.ReadArrayReply(xStreamSliceMapParse)
-	if cmd.err != nil {
+
+	v, cmd.err = cn.Rd.ReadArrayReply(xStreamSliceMapParse) // "*1\r\n
+	if cmd.err != nil || v == nil {
 		return cmd.err
 	}
-	cmd.val = v.(map[string]*XStreamSliceCmd)
+	cmd.val = v.(map[string][]*XStream)
 	return nil
 }
 
+//1) 1) "stream1"
+//   2) 1) 1) 1532923998460-0
+//         2) 1) "foo"
+//            2) "10"
+
+//    *2\r\n
+//    $7\r\n
+//    stream1\r\n   --->  1
+//    *1\r\n        -----> 2
+//    *2\r\n
+//    +1532923998460-0\r\n
+//    *2\r\n
+//    $3\r\n
+//    foo\r\n
+//    $2\r\n
+//    10\r\n
+
 func xStreamSliceMapParse(rd *proto.Reader, n int64) (interface{}, error) {
-	ret := map[string][]*XStreamSliceCmd{}
+	ret := map[string][]*XStream{}
 	for i := int64(0); i < n; i++ {
-		val, err := rd.ReadArrayReply(xStreamSliceWithKeyParser)
+		val, err := rd.ReadArrayReply(xStreamSliceWithKeyParser) // *2\r\n
 		if err != nil {
 			return nil, err
 		}
-		for k, v := range val.(map[string][]*XStreamSliceCmd) {
+		for k, v := range val.(map[string][]*XStream) {
 			ret[k] = v
 		}
 	}
 	return ret, nil
 }
 
+//    $7\r\n
+//    stream1\r\n   --->  1
+//    *1\r\n        -----> 2
+//    *2\r\n
+//    +1532923998460-0\r\n
+//    *2\r\n
+//    $3\r\n
+//    foo\r\n
+//    $2\r\n
+//    10\r\n
+
 func xStreamSliceWithKeyParser(rd *proto.Reader, n int64) (interface{}, error) {
 	var key string
-	key, err := rd.ReadStringReply()
+
+	key, err := rd.ReadStringReply() // $7\r\n
+	//log.Info(" xStreamSliceWithKeyParser 1:", key, " err:", err) // stream1
 	if err != nil {
 		return nil, err
 	}
-	v, err := rd.ReadArrayReply(xStreamSliceParser)
+
+	v, err := rd.ReadArrayReply(xStreamMapSliceParser) //  *1\r\n
+	//log.Info(" xStreamSliceWithKeyParser 7:", v, " err:", err)
 	if err != nil {
 		return nil, err
 	}
-	return map[string][]*XStreamSliceCmd{key: v.([]*XStreamSliceCmd)}, nil
+	return map[string][]*XStream{key: v.([]*XStream)}, nil
 }
 
-// Implements proto.MultiBulkParse
+//    *3\r\n
+//    +1532923998460-0\r\n
+//    *2\r\n
+//    $3\r\n
+//    foo\r\n
+//    $2\r\n
+//    10\r\n
+
+//    +1532923998461-0\r\n
+//    *2\r\n
+//    $3\r\n
+//    foo\r\n
+//    $2\r\n
+//    10\r\n
+
+func xStreamMapSliceParser(rd *proto.Reader, n int64) (interface{}, error) {
+	xx := make([]*XStream, n)
+	//log.Info(" xStreamSliceWithKeyParser 2 len:", n)   // *3\r\n
+
+	for i := int64(0); i < n; i++ {
+		v, err := rd.ReadArrayReply(xStreamMapParser)
+		if err != nil {
+			return nil, err
+		}
+		xx[i] = v.(*XStream)
+	}
+	return xx, nil
+}
+
+//    +1532923998460-0\r\n
+//    *2\r\n
+//    $3\r\n
+//    foo\r\n
+//    $2\r\n
+//    10\r\n
+//    +1532923998461-0\r\n
+//    *2\r\n
+//    $3\r\n
+//    foo\r\n
+//    $2\r\n
+//    10\r\n
+
+func xStreamMapParser(rd *proto.Reader, n int64) (interface{}, error) {
+	if n != 2 {
+		return nil, fmt.Errorf("got %d, wanted 2", n)
+	}
+
+	stream, err := rd.ReadStringReply()
+
+	//log.Info(" xStreamSliceWithKeyParser 3 ", stream, " err:", err)  // +1532923998460-0\r\n
+	if err != nil {
+		return nil, err
+	}
+
+	v, err := rd.ReadArrayReply(xMessageMapParser) //    *2\r\n
+	//log.Info(" xStreamSliceWithKeyParser 6 ", v, " err:", err)
+	if err != nil {
+		return nil, err
+	}
+
+	return &XStream{
+		Stream:   stream,
+		Messages: v.([]*XMessage),
+	}, nil
+}
+
+//    $3\r\n
+//    foo\r\n
+//    $2\r\n
+//    10\r\n
+
+//&XMessage{
+//ID:     id,
+//Values: v.(map[string]interface{}),
+//}
+
+func xMessageMapParser(rd *proto.Reader, n int64) (interface{}, error) {
+	msgs := make([]*XMessage, n)
+
+	values := make(map[string]interface{}, n)
+	for i := int64(0); i < n; i += 2 {
+
+		field, err := rd.ReadStringReply()
+		if err != nil {
+			return nil, err
+		}
+		value, err := rd.ReadStringReply()
+		if err != nil {
+			return nil, err
+		}
+		//
+		//values[field] = value
+		//
+		//
+
+		//v, err := rd.ReadArrayReply(xMessageMap)
+		//if err != nil {
+		//	return nil, err
+		//}
+		//msgs[i] = v.(*XMessage)
+
+		values[field] = value
+		X1 := &XMessage{
+			ID:     "123",
+			Values: values,
+		}
+		//log.Info(" xStreamSliceWithKeyParser 4 ", X1)
+
+		msgs[i] = X1
+
+	}
+	return msgs, nil
+}
+
+func xMessageMap(rd *proto.Reader, n int64) (interface{}, error) {
+
+	id, err := rd.ReadStringReply()
+
+	if err != nil {
+		return nil, err
+	}
+
+	v, err := rd.ReadArrayReply(xKeyValueMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return &XMessage{
+		ID:     id,
+		Values: v.(map[string]interface{}),
+	}, nil
+}
+
+func xKeyValueMap(rd *proto.Reader, n int64) (interface{}, error) {
+	values := make(map[string]interface{}, n)
+	for i := int64(0); i < n; i += 2 {
+		key, err := rd.ReadStringReply()
+		if err != nil {
+			return nil, err
+		}
+
+		value, err := rd.ReadStringReply()
+		if err != nil {
+			return nil, err
+		}
+
+		values[key] = value
+	}
+	return values, nil
+}
+
+// Implements proto.MultiBulkParse,
 func xStreamSliceParser(rd *proto.Reader, n int64) (interface{}, error) {
 	xx := make([]*XStream, n)
 	for i := int64(0); i < n; i++ {
@@ -837,7 +1035,7 @@ func xStreamSliceParser(rd *proto.Reader, n int64) (interface{}, error) {
 	return xx, nil
 }
 
-// Implements proto.MultiBulkParse
+// Implements proto.MultiBulkParse,
 func xStreamParser(rd *proto.Reader, n int64) (interface{}, error) {
 	if n != 2 {
 		return nil, fmt.Errorf("got %d, wanted 2", n)
@@ -894,8 +1092,17 @@ func (cmd *XMessageSliceCmd) readReply(cn *pool.Conn) error {
 		return cmd.err
 	}
 	cmd.val = v.([]*XMessage)
+	for _, v := range cmd.val {
+		log.Infof("=====> %+v \n", v)
+	}
+
 	return nil
 }
+
+//    $3\r\n
+//    foo\r\n
+//    $2\r\n
+//    10\r\n
 
 // Implements proto.MultiBulkParse
 func xMessageSliceParser(rd *proto.Reader, n int64) (interface{}, error) {
@@ -912,7 +1119,9 @@ func xMessageSliceParser(rd *proto.Reader, n int64) (interface{}, error) {
 
 // Implements proto.MultiBulkParse
 func xMessageParser(rd *proto.Reader, n int64) (interface{}, error) {
+
 	id, err := rd.ReadStringReply()
+
 	if err != nil {
 		return nil, err
 	}
