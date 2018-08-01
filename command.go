@@ -950,9 +950,10 @@ func xStreamMapParser(rd *proto.Reader, n int64) (interface{}, error) {
 func xMessageMapParser(rd *proto.Reader, n int64) (interface{}, error) {
 	msgs := make([]*XMessage, n)
 
-	values := make(map[string]interface{}, n)
-	for i := int64(0); i < n; i += 2 {
+	//log.Info("===========>", n)
 
+	for i := int64(0); i < n; i += 2 {
+		values := make(map[string]interface{}, n)
 		field, err := rd.ReadStringReply()
 		if err != nil {
 			return nil, err
@@ -973,8 +974,9 @@ func xMessageMapParser(rd *proto.Reader, n int64) (interface{}, error) {
 		//msgs[i] = v.(*XMessage)
 
 		values[field] = value
+
 		X1 := &XMessage{
-			ID:     "123",
+			ID:     "",
 			Values: values,
 		}
 		//log.Info(" xStreamSliceWithKeyParser 4 ", X1)
@@ -983,43 +985,6 @@ func xMessageMapParser(rd *proto.Reader, n int64) (interface{}, error) {
 
 	}
 	return msgs, nil
-}
-
-func xMessageMap(rd *proto.Reader, n int64) (interface{}, error) {
-
-	id, err := rd.ReadStringReply()
-
-	if err != nil {
-		return nil, err
-	}
-
-	v, err := rd.ReadArrayReply(xKeyValueMap)
-	if err != nil {
-		return nil, err
-	}
-
-	return &XMessage{
-		ID:     id,
-		Values: v.(map[string]interface{}),
-	}, nil
-}
-
-func xKeyValueMap(rd *proto.Reader, n int64) (interface{}, error) {
-	values := make(map[string]interface{}, n)
-	for i := int64(0); i < n; i += 2 {
-		key, err := rd.ReadStringReply()
-		if err != nil {
-			return nil, err
-		}
-
-		value, err := rd.ReadStringReply()
-		if err != nil {
-			return nil, err
-		}
-
-		values[key] = value
-	}
-	return values, nil
 }
 
 // Implements proto.MultiBulkParse,
