@@ -11,7 +11,6 @@ import (
 	"github.com/go-redis/redis/internal/pool"
 	"github.com/go-redis/redis/internal/proto"
 	"github.com/go-redis/redis/internal/util"
-	"github.com/qiniu/log"
 )
 
 type Cmder interface {
@@ -917,14 +916,11 @@ func xStreamMapParser(rd *proto.Reader, n int64) (interface{}, error) {
 	if n != 2 {
 		return nil, fmt.Errorf("got %d, wanted 2", n)
 	}
-
 	stream, err := rd.ReadStringReply()
-
-	//log.Info(" xStreamSliceWithKeyParser 3 ", stream, " err:", err)  // +1532923998460-0\r\n
 	if err != nil {
 		return nil, err
 	}
-
+	//log.Info(" xStreamSliceWithKeyParser 3 ", stream, " err:", err) // +1532923998460-0\r\n
 	v, err := rd.ReadArrayReply(xMessageMapParser) //    *2\r\n
 	//log.Info(" xStreamSliceWithKeyParser 6 ", v, " err:", err)
 	if err != nil {
@@ -948,11 +944,14 @@ func xStreamMapParser(rd *proto.Reader, n int64) (interface{}, error) {
 //}
 
 func xMessageMapParser(rd *proto.Reader, n int64) (interface{}, error) {
-	msgs := make([]*XMessage, n)
 
-	//log.Info("===========>", n)
-
-	for i := int64(0); i < n; i += 2 {
+	allocN := n
+	if n > 1 {
+		allocN = n / 2
+	}
+	msgs := make([]*XMessage, allocN)
+	//fmt.Println("========+================>", allocN)
+	for i := int64(0); i < allocN; i++ {
 		values := make(map[string]interface{}, n)
 		field, err := rd.ReadStringReply()
 		if err != nil {
@@ -980,7 +979,7 @@ func xMessageMapParser(rd *proto.Reader, n int64) (interface{}, error) {
 			Values: values,
 		}
 		//log.Info(" xStreamSliceWithKeyParser 4 ", X1)
-
+		//fmt.Println("========+================>2222:   ", i)
 		msgs[i] = X1
 
 	}
@@ -1057,10 +1056,6 @@ func (cmd *XMessageSliceCmd) readReply(cn *pool.Conn) error {
 		return cmd.err
 	}
 	cmd.val = v.([]*XMessage)
-	for _, v := range cmd.val {
-		log.Infof("=====> %+v \n", v)
-	}
-
 	return nil
 }
 

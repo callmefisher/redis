@@ -185,7 +185,7 @@ type Cmdable interface {
 
 	XGroupCreate(key string, group, start string) *StatusCmd
 	XReadGroupN(group_name, consumer string, count int64, keys ...string) *XStreamSliceMapCmd
-	XAck(key, group_name string, stream_ids ...string) *IntCmd
+	XAck(key, group_name string, streamids []string) *IntCmd
 
 	ZAdd(key string, members ...Z) *IntCmd
 	ZAddNX(key string, members ...Z) *IntCmd
@@ -1444,7 +1444,7 @@ func (c *cmdable) XReadGroupN(group, consumer string, count int64, keys ...strin
 	return cmd
 }
 
-func (c *cmdable) XAck(key, group string, streams ...string) *IntCmd {
+func (c *cmdable) XAck(key, group string, streams []string) *IntCmd {
 	args := []interface{}{"xack", key, group}
 	for _, v := range streams {
 		args = append(args, v)
