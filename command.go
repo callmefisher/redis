@@ -857,13 +857,11 @@ func xStreamSliceWithKeyParser(rd *proto.Reader, n int64) (interface{}, error) {
 	var key string
 
 	key, err := rd.ReadStringReply() // $7\r\n
-	//log.Info(" xStreamSliceWithKeyParser 1:", key, " err:", err) // stream1
 	if err != nil {
 		return nil, err
 	}
 
 	v, err := rd.ReadArrayReply(xStreamMapSliceParser) //  *1\r\n
-	//log.Info(" xStreamSliceWithKeyParser 7:", v, " err:", err)
 	if err != nil {
 		return nil, err
 	}
@@ -887,7 +885,6 @@ func xStreamSliceWithKeyParser(rd *proto.Reader, n int64) (interface{}, error) {
 
 func xStreamMapSliceParser(rd *proto.Reader, n int64) (interface{}, error) {
 	xx := make([]*XStream, n)
-	//log.Info(" xStreamSliceWithKeyParser 2 len:", n)   // *3\r\n
 
 	for i := int64(0); i < n; i++ {
 		v, err := rd.ReadArrayReply(xStreamMapParser)
@@ -922,7 +919,6 @@ func xStreamMapParser(rd *proto.Reader, n int64) (interface{}, error) {
 	}
 	//log.Info(" xStreamSliceWithKeyParser 3 ", stream, " err:", err) // +1532923998460-0\r\n
 	v, err := rd.ReadArrayReply(xMessageMapParser) //    *2\r\n
-	//log.Info(" xStreamSliceWithKeyParser 6 ", v, " err:", err)
 	if err != nil {
 		return nil, err
 	}
@@ -978,7 +974,6 @@ func xMessageMapParser(rd *proto.Reader, n int64) (interface{}, error) {
 			ID:     "",
 			Values: values,
 		}
-		//log.Info(" xStreamSliceWithKeyParser 4 ", X1)
 		//fmt.Println("========+================>2222:   ", i)
 		msgs[i] = X1
 
