@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/callmefisher/redis/internal/util"
-	"github.com/qiniu/log"
 )
 
 const bytesAllocLimit = 1024 * 1024 // 1mb
@@ -164,8 +163,7 @@ func (r *Reader) ReadFloatReply() (float64, error) {
 	return util.ParseFloat(b, 64)
 }
 
-
-func (r* Reader) Test(m MultiBulkParse)(interface{}, error){
+func (r *Reader) Test(m MultiBulkParse) (interface{}, error) {
 	v, _ := r.src.ReadBytes('\n')
 	v1, _ := r.src.ReadBytes('\n')
 	v2, _ := r.src.ReadBytes('\n')
@@ -178,17 +176,12 @@ func (r* Reader) Test(m MultiBulkParse)(interface{}, error){
 	//v9, _ := r.src.ReadBytes('\n')
 	//v10, _ := r.src.ReadBytes('\n')
 	//v11, _ := r.src.ReadBytes('\n')
-	
-	log.Infof("redis: ===>  %s %s %s  ", string(v), string(v1), string(v2))
-		//%s  %s %s %s %s  %s %s %s %s string(v3), string(v4), string(v5), string(v6), string(v7), string(v8), string(v9), string(v10), string(v11) )
-	
-	log.Println("\n")
-	
+
 	return nil, nil
 }
 
 func (r *Reader) ReadArrayReply(m MultiBulkParse) (interface{}, error) {
-	
+
 	line, err := r.ReadLine()
 	if err != nil {
 		return nil, err
@@ -203,7 +196,7 @@ func (r *Reader) ReadArrayReply(m MultiBulkParse) (interface{}, error) {
 		}
 		return m(r, n)
 	default:
-		
+
 		return nil, fmt.Errorf("redis: can't parse array reply: %.100q ", line)
 	}
 }
