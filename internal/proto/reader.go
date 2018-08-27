@@ -163,23 +163,6 @@ func (r *Reader) ReadFloatReply() (float64, error) {
 	return util.ParseFloat(b, 64)
 }
 
-func (r *Reader) Test(m MultiBulkParse) (interface{}, error) {
-	v, _ := r.src.ReadBytes('\n')
-	v1, _ := r.src.ReadBytes('\n')
-	v2, _ := r.src.ReadBytes('\n')
-	//v3, _ := r.src.ReadBytes('\n')
-	//v4, _ := r.src.ReadBytes('\n')
-	//v5, _ := r.src.ReadBytes('\n')
-	//v6, _ := r.src.ReadBytes('\n')
-	//v7, _ := r.src.ReadBytes('\n')
-	//v8, _ := r.src.ReadBytes('\n')
-	//v9, _ := r.src.ReadBytes('\n')
-	//v10, _ := r.src.ReadBytes('\n')
-	//v11, _ := r.src.ReadBytes('\n')
-
-	return nil, nil
-}
-
 func (r *Reader) ReadArrayReply(m MultiBulkParse) (interface{}, error) {
 
 	line, err := r.ReadLine()
