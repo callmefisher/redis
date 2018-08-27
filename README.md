@@ -1,6 +1,6 @@
 # Redis client for Golang
 
-[![Build Status](https://travis-ci.org/go-redis/redis.png?branch=master)](https://travis-ci.org/go-redis/redis)
+[![Build Status](https://travis-ci.org/callmefisher/redis.png?branch=master)](https://travis-ci.org/callmefisher/redis)
 [![GoDoc](https://godoc.org/github.com/callmefisher/redis?status.svg)](https://godoc.org/github.com/callmefisher/redis)
 [![Airbrake](https://img.shields.io/badge/kudos-airbrake.io-orange.svg)](https://airbrake.io)
 
@@ -111,7 +111,7 @@ vals, err := client.Eval("return {KEYS[1],ARGV[1]}", []string{"key"}, "hello").R
 
 ## Benchmark
 
-go-redis vs redigo:
+callmefisher vs redigo:
 
 ```
 BenchmarkSetGoRedis10Conns64Bytes-4 	  200000	      7621 ns/op	     210 B/op	       6 allocs/op
