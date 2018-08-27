@@ -1,9 +1,6 @@
 sudo: true
 language: go
 
-services:
-  - redis-server
-
 go:
   - 1.10.x
   - tip
