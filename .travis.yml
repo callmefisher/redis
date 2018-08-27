@@ -5,16 +5,14 @@ services:
   - redis-server
 
 go:
-  - 1.7.x
-  - 1.8.x
-  - 1.9.x
   - 1.10.x
   - tip
 
 matrix:
   allow_failures:
     - go: tip
-
+before_install:
+    - ./install-redis-5.0.sh
 install:
   - go get github.com/onsi/ginkgo
   - go get github.com/onsi/gomega
