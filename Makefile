@@ -13,7 +13,7 @@ bench: testdeps
 
 testdata/redis:
 	mkdir -p $@
-	wget -qO- https://github.com/antirez/redis/archive/unstable.tar.gz | tar xvz --strip-components=1 -C $@
+	wget -qO- https://github.com/antirez/redis/archive/5.0-rc4.tar.gz | tar xvz --strip-components=1 -C $@
 
 testdata/redis/src/redis-server: testdata/redis
 	sed -i.bak 's/libjemalloc.a/libjemalloc.a -lrt/g' $</src/Makefile
